@@ -1,6 +1,13 @@
 #!/usr/bin/ruby
 
 require 'io/wait'
+require 'rubygems'
+require 'mqtt'
+
+if ARGV.length != 2
+  puts "Please start the app with two player initials: ruby hi5.rb rmb jsw"
+  exit
+end
 
 STATE_START = 0
 STATE_GAME = 1
@@ -22,6 +29,8 @@ $combo = 0
 $best_combo = 0
 $last_high_five_timestamp = 0
 $fretboard = ""
+
+$initials = "%s && %s" % ARGV
 
 def char_if_pressed
   begin
@@ -167,6 +176,9 @@ def update_game_state(console_input)
     # check game over
     if $misses < 1
       $game_state = STATE_OVER
+      MQTT::Client.connect(:remote_host => 'q.m2m.io', :keep_alive => 30, :client_id => "hfh%d" % Time.now.to_i) do |c|
+        c.publish('public/highfivehero/scores', '{ "score":%d, "maxcombo":%d, "initials":"%s"}' % [$score, $best_combo, $initials])
+      end
     end
 
   when STATE_OVER
